@@ -1,14 +1,16 @@
-package app.morphe.patches.youtube.interaction.copyvideourl
+@file:Suppress("SpellCheckingInspection")
+
+package app.morphe.patches.youtube.interaction.playall
 
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patches.shared.misc.settings.preference.ListPreference
 import app.morphe.patches.shared.misc.settings.preference.PreferenceCategory
 import app.morphe.patches.shared.misc.settings.preference.PreferenceScreenPreference.Sorting
 import app.morphe.patches.shared.misc.settings.preference.SwitchPreference
-import app.morphe.patches.youtube.layout.player.buttons.addPlayerBottomButton
-import app.morphe.patches.youtube.layout.player.buttons.playerOverlayButtonsHookPatch
-import app.morphe.patches.youtube.misc.playercontrols.addLegacyBottomControl
-import app.morphe.patches.youtube.misc.playercontrols.initializeLegacyBottomControl
+import app.morphe.patches.youtube.misc.extension.sharedExtensionPatch
+import app.morphe.patches.youtube.misc.playercontrols.addTopControl
+import app.morphe.patches.youtube.misc.playercontrols.initializeTopControl
 import app.morphe.patches.youtube.misc.playercontrols.injectVisibilityCheckCall
 import app.morphe.patches.youtube.misc.playercontrols.legacyPlayerControlsPatch
 import app.morphe.patches.youtube.misc.settings.PreferenceScreen
@@ -18,9 +20,7 @@ import app.morphe.patches.youtube.video.information.videoInformationPatch
 import app.morphe.util.ResourceGroup
 import app.morphe.util.copyResources
 
-private const val BUTTON_DESCRIPTOR = "Lapp/morphe/extension/youtube/videoplayer/CopyVideoURLButton;"
-
-private val copyVideoURLResourcePatch = resourcePatch {
+private val playAllButtonResourcePatch = resourcePatch {
     dependsOn(
         settingsPatch,
         legacyPlayerControlsPatch
@@ -33,45 +33,47 @@ private val copyVideoURLResourcePatch = resourcePatch {
                 sorting = Sorting.UNSORTED,
                 tag = "app.morphe.extension.shared.settings.preference.NoTitlePreferenceCategory",
                 preferences = setOf(
-                    SwitchPreference("morphe_copy_video_url"),
-                    SwitchPreference("morphe_copy_video_url_timestamp")
+                    SwitchPreference("morphe_play_all_button"),
+                    ListPreference("morphe_play_all_button_type")
                 )
             )
         )
 
         copyResources(
-            "copyvideourl",
+            "playallbutton",
             ResourceGroup(
-                resourceDirectoryName = "drawable",
-                "morphe_yt_copy.xml",
-                "morphe_yt_copy_timestamp.xml",
-                "morphe_yt_copy_bold.xml",
-                "morphe_yt_copy_timestamp_bold.xml"
+                "drawable",
+                "morphe_play_all_button.xml",
+                "morphe_play_all_button_bold.xml"
             )
         )
+    }
 
-        addLegacyBottomControl("copyvideourl")
+    finalize {
+        addTopControl("playallbutton",
+            "@+id/morphe_play_all_button",
+            "@+id/morphe_play_all_button")
     }
 }
 
+private const val BUTTON_DESCRIPTOR = "Lapp/morphe/extension/youtube/videoplayer/PlayAllButton;"
+
 @Suppress("unused")
-val copyVideoURLPatch = bytecodePatch(
-    name = "Copy video URL",
-    description = "Adds options to display buttons in the video player to copy video URLs.",
+val playAllButtonPatch = bytecodePatch(
+    name = "Play all",
+    description = "Adds an option to play all the videos from a channel and to display play all button in the video player.",
 ) {
     dependsOn(
-        copyVideoURLResourcePatch,
-        playerOverlayButtonsHookPatch,
-        legacyPlayerControlsPatch,
+        sharedExtensionPatch,
+        settingsPatch,
+        playAllButtonResourcePatch,
         videoInformationPatch,
     )
 
     compatibleWith(COMPATIBILITY_YOUTUBE)
 
     execute {
-        addPlayerBottomButton(BUTTON_DESCRIPTOR)
-
-        initializeLegacyBottomControl(BUTTON_DESCRIPTOR)
+        initializeTopControl(BUTTON_DESCRIPTOR)
         injectVisibilityCheckCall(BUTTON_DESCRIPTOR)
     }
 }
